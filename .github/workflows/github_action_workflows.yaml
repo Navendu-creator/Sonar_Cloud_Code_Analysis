@@ -2,14 +2,15 @@ name: "sonar_cloud_scan_github_actions"
 on:
   push:
 
-  
 jobs:
   DemoSonarCloudSCan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
-            fetch-depth: 0
+          fetch-depth: 0
+
       - name: Checkmarx CxFlow Action & SCA
         uses: checkmarx-ts/checkmarx-cxflow-github-action@v1.9
         with:
@@ -19,58 +20,85 @@ jobs:
           checkmarx_username: ${{ secrets.DX_CHECKMARX_USERNAME }}
           checkmarx_password: ${{ secrets.DX_CHECKMARX_PASSWORD }}
           checkmarx_client_secret: ${{ secrets.MTF_CHECKMARX_CLIENT_SECRET }}
-          sca_api_url:	https://api-sca.checkmarx.net	
-          sca_app_url:	https://sca.checkmarx.net
-          sca_tenant:	Monotype
-          sca_username:	service.mosaic@monotype.com
-          sca_password:	${{ secrets.MTF_SCA_PASSWORD }}
+          sca_api_url: https://api-sca.checkmarx.net
+          sca_app_url: https://sca.checkmarx.net
+          sca_tenant: Monotype
+          sca_username: service.mosaic@monotype.com
+          sca_password: ${{ secrets.MTF_SCA_PASSWORD }}
           scanners: sast,sca
-          params: --checkmarx.version=9.0 --cx-flow.zip-exclude=".git/.*,node_modules/.*,test/.*" --cx-flow-enabled-vulnerability-scanners="sca" --sca-include-files="package.json,package-lock.json" --sca.filter-out-dev-dependency=true --sca.team ="/CxServer/MTF --logging.level.com.checkmarx=DEBUG
-          
+          params: >
+            --checkmarx.version=9.0 
+            --cx-flow.zip-exclude=".git/.*,node_modules/.*,test/.*" 
+            --cx-flow-enabled-vulnerability-scanners="sca" 
+            --sca-include-files="package.json,package-lock.json" 
+            --sca.filter-out-dev-dependency=true 
+            --sca.team="/CxServer/MTF" 
+            --logging.level.com.checkmarx=DEBUG
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests and generate coverage report
+        run: |
+          pytest --cov=./ --cov-report=xml
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.organization=admin
+            -Dsonar.projectKey=petclinic
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+
       - name: SonarQube Scan update projectVersion
-        run: sed -i 's/GIT-COMMIT/'${{ steps.truncatedString.outputs.string }}'/g' sonar-project.properties
-      
+        run: sed -i 's/GIT-COMMIT/'${{ github.sha }}/g' sonar-project.properties
+
       - name: Get existing coverage
         env:
           USER: ${{ secrets.DEVOPS_SONAR_USER }}
           PASS: ${{ secrets.DEVOPS_SONAR_PWD }}
         run: |
-           chmod +x .github/scripts/*
-           output=`.github/scripts/getcoverage.sh $USER $PASS $SONAR_PROJ`
-           echo $output
-           echo "before=$output" >> $GITHUB_ENV
- 
+          chmod +x .github/scripts/*
+          output=$(./github/scripts/getcoverage.sh $USER $PASS $SONAR_PROJ)
+          echo $output
+          echo "before=$output" >> $GITHUB_ENV
+
       - name: Publish Sonar
         run: sonar-scanner
-      
+
       - name: SonarQube Quality Gate check
         id: sonarqube-quality-gate-check
         uses: sonarsource/sonarqube-quality-gate-action@master
-         Force to fail step after specific time.
         timeout-minutes: 5
         env:
-         SONAR_TOKEN: ${{ secrets.DEVOPS_SONAR_TOKEN }}
-         SONAR_HOST_URL: https://sonarqube.monotype.com
-          
-      - name: Get New coverage
+          SONAR_TOKEN: ${{ secrets.DEVOPS_SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarqube.monotype.com
+
+      - name: Get new coverage
         env:
-         USER: ${{ secrets.DEVOPS_SONAR_USER }}
-         PASS: ${{ secrets.DEVOPS_SONAR_PWD }}
+          USER: ${{ secrets.DEVOPS_SONAR_USER }}
+          PASS: ${{ secrets.DEVOPS_SONAR_PWD }}
         run: |
           chmod +x .github/scripts/*
-          output=`.github/scripts/getcoverage.sh $USER $PASS $SONAR_PROJ`
+          output=$(./github/scripts/getcoverage.sh $USER $PASS $SONAR_PROJ)
           echo $output
           echo "after=$output" >> $GITHUB_ENV
-           
+
       - name: CheckSonargate
-         run: 
+        run: |
           before=${{ env.before }}
-           echo $before
-           after=${{ env.after }}
-           echo $after
-           .github/scripts/sonarcheck.sh $before $after
-        with:
-          args: >
-              -Dsonar.organization=admin
-              -Dsonar.projectKey=petclinic
-              -Dsonar.python.coverage.reportPaths=coverage.xml
+          echo $before
+          after=${{ env.after }}
+          echo $after
+          .github/scripts/sonarcheck.sh $before $after
