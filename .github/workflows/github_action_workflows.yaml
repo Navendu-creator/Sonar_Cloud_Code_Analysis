@@ -1,23 +1,21 @@
-name: "sonar_cloud_scan_github_actions"
+name: Checkmarq Scan
+
 on:
- push:
+  push:
 
 jobs:
-  DemoSonarCloudSCan:
+  checkmarq_scan:
+    name: Run Checkmarq Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-            fetch-depth: 0
-      - name: Checkmarx CxFlow Action
+      - name: Checkmarq Scan
         uses: checkmarx-ts/checkmarx-cxflow-github-action@v1.6
         with:
           team: /CxServer
-          project: DI_ITYPE
+          project: PythonProject  # Update project name accordingly
           checkmarx_url: ${{ secrets.MTF_CHECKMARX_URL }}
           checkmarx_username: ${{ secrets.DI_CHECKMARX_USERNAME }}
           checkmarx_password: ${{ secrets.DI_CHECKMARX_PASSWORD }}
-        #  checkmarx_client_secret: ${{ secrets.MTF_CHECKMARX_CLIENT_SECRET }}
           params: --namespace=${{ github.repository_owner }} --repo-name=${{ github.event.repository.name }} --cx-flow.zip-exclude=".git/.*, .github/., node_modules/.*., public/., coverage/., test/., *.svg," --logging.level.com.checkmarx=DEBUG --logging.level.org.apache.http.client.protocol=ERROR 
           scanners: sast
           github_token: ${{ secrets.AUTH }}
