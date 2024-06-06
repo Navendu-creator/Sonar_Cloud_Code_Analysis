@@ -3,6 +3,7 @@ name: Checkmarq Scan
 on:
   push:
 
+
 jobs:
   checkmarq_scan:
     name: Run Checkmarq Scan
@@ -12,7 +13,7 @@ jobs:
         uses: checkmarx-ts/checkmarx-cxflow-github-action@v1.6
         with:
           team: /CxServer
-          project: PythonProject  # Update project name accordingly
+          project: PythonProject  
           checkmarx_url: ${{ secrets.MTF_CHECKMARX_URL }}
           checkmarx_username: ${{ secrets.DI_CHECKMARX_USERNAME }}
           checkmarx_password: ${{ secrets.DI_CHECKMARX_PASSWORD }}
