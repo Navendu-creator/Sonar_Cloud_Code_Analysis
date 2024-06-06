@@ -17,6 +17,7 @@ jobs:
           checkmarx_url: ${{ secrets.MTF_CHECKMARX_URL }}
           checkmarx_username: ${{ secrets.DI_CHECKMARX_USERNAME }}
           checkmarx_password: ${{ secrets.DI_CHECKMARX_PASSWORD }}
-          params: --namespace=${{ github.repository_owner }} --repo-name=${{ github.event.repository.name }} --cx-flow.zip-exclude=".git/.*, .github/., node_modules/.*., public/., coverage/., test/., *.svg," --logging.level.com.checkmarx=DEBUG --logging.level.org.apache.http.client.protocol=ERROR 
+          params: --namespace=${{ github.repository_owner }} --repo-name=${{ github.event.repository.name }} --cx-flow.zip-exclude=".git/.*, .github/., node_modules/.*., public/., coverage/., test/., *.svg," --logging.level.com.checkmarx=DEBUG
+
           scanners: sast
           github_token: ${{ secrets.AUTH }}
